@@ -1,0 +1,24 @@
+# Mac
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# dotenv / secrets
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Generated / runtime
+uploads/
+alembic/versions/
