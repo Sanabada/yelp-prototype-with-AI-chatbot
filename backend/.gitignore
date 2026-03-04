@@ -12,20 +12,13 @@ __pycache__/
 venv/
 env/
 
-# Secrets
+# dotenv / secrets
 .env
 
 # IDE
 .vscode/
 .idea/
 
-# Backend runtime/generated
+# Generated / runtime
 uploads/
 alembic/versions/
-
-# Frontend (for later)
-node_modules/
-dist/
-build/
-.next/
-.vite/
