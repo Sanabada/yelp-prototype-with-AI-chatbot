@@ -9,31 +9,31 @@ function Navbar() {
   };
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
-      <div className="container">
-        <Link className="navbar-brand" to="/">
-          Yelp Prototype
+    <nav className="navbar navbar-expand-lg navbar-light bg-white px-4">
+      <div className="container-fluid">
+        <Link className="navbar-brand fw-bold text-danger fs-4" to="/">
+          Yelp<span className="text-dark">Prototype</span>
         </Link>
 
-        <div>
+        <div className="d-flex align-items-center gap-2">
           {!token ? (
             <>
-              <Link className="btn btn-outline-light me-2" to="/login">
+              <Link className="btn btn-outline-dark rounded-pill px-4" to="/login">
                 Login
               </Link>
-              <Link className="btn btn-warning" to="/signup">
+              <Link className="btn btn-primary rounded-pill px-4" to="/signup">
                 Signup
               </Link>
             </>
           ) : (
             <>
-              <Link className="btn btn-outline-light me-2" to="/profile">
+              <Link className="btn btn-outline-dark rounded-pill px-4" to="/profile">
                 Profile
               </Link>
-              <Link className="btn btn-success me-2" to="/chat">
+              <Link className="btn btn-primary rounded-pill px-4" to="/chat">
                 AI Assistant
               </Link>
-              <button className="btn btn-danger" onClick={handleLogout}>
+              <button className="btn btn-danger rounded-pill px-4" onClick={handleLogout}>
                 Logout
               </button>
             </>
