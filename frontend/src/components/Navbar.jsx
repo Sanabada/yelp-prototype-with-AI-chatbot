@@ -1,43 +1,53 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 function Navbar() {
-  const token = localStorage.getItem("token");
+  const location = useLocation();
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-  };
+  const isActive = (path) =>
+    location.pathname === path ? "btn-danger" : "btn-outline-dark";
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white px-4">
+    <nav className="navbar navbar-expand-lg bg-white shadow-sm px-4">
       <div className="container-fluid">
+
         <Link className="navbar-brand fw-bold text-danger fs-4" to="/">
-          Yelp<span className="text-dark">Prototype</span>
+          YelpPrototype
         </Link>
 
-        <div className="d-flex align-items-center gap-2">
-          {!token ? (
-            <>
-              <Link className="btn btn-outline-dark rounded-pill px-4" to="/login">
-                Login
-              </Link>
-              <Link className="btn btn-primary rounded-pill px-4" to="/signup">
-                Signup
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link className="btn btn-outline-dark rounded-pill px-4" to="/profile">
-                Profile
-              </Link>
-              <Link className="btn btn-primary rounded-pill px-4" to="/chat">
-                AI Assistant
-              </Link>
-              <button className="btn btn-danger rounded-pill px-4" onClick={handleLogout}>
-                Logout
-              </button>
-            </>
-          )}
+        <div className="d-flex gap-2">
+
+          <Link className={`btn btn-sm ${isActive("/")}`} to="/">
+            Explore
+          </Link>
+
+          <Link className={`btn btn-sm ${isActive("/profile")}`} to="/profile">
+            Profile
+          </Link>
+
+          <Link className={`btn btn-sm ${isActive("/add-restaurant")}`} to="/add-restaurant">
+            Add Restaurant
+          </Link>
+
+          <Link className={`btn btn-sm ${isActive("/favorites")}`} to="/favorites">
+            Favorites
+          </Link>
+
+          <Link className={`btn btn-sm ${isActive("/history")}`} to="/history">
+            History
+          </Link>
+
+          <Link className={`btn btn-sm ${isActive("/chat")}`} to="/chat">
+            AI Assistant
+          </Link>
+
+          <Link className="btn btn-outline-dark btn-sm" to="/login">
+            Login
+          </Link>
+
+          <Link className="btn btn-danger btn-sm" to="/signup">
+            Signup
+          </Link>
+
         </div>
       </div>
     </nav>
