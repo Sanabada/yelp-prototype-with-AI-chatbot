@@ -29,3 +29,18 @@ dist/
 build/
 .next/
 .vite/
+
+# secrets
+.env
+backend/.env
+
+# virtualenv + python cache
+.venv/
+venv/
+backend/app/.venv/
+__pycache__/
+*.pyc
+
+# uploads
+backend/uploads/
+uploads/

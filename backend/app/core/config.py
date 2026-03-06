@@ -1,3 +1,5 @@
+from urllib.parse import quote_plus
+
 from pydantic_settings import BaseSettings
 
 
@@ -20,9 +22,13 @@ class Settings(BaseSettings):
     @property
     def sqlalchemy_database_uri(self) -> str:
         # SQLAlchemy + PyMySQL
+        user = quote_plus(self.MYSQL_USER)
+        password = quote_plus(self.MYSQL_PASSWORD)  # ✅ encodes @ as %40, etc.
+        db = quote_plus(self.MYSQL_DB)
+
         return (
-            f"mysql+pymysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}"
-            f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}"
+            f"mysql+pymysql://{user}:{password}"
+            f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{db}"
         )
 
     class Config:

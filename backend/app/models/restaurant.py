@@ -1,7 +1,7 @@
 from sqlalchemy import String, Text, DateTime, func, ForeignKey, JSON, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.session import Base
 
 
 class Restaurant(Base):
