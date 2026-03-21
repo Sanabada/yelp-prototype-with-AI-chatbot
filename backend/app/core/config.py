@@ -1,6 +1,6 @@
 from urllib.parse import quote_plus
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -19,21 +19,26 @@ class Settings(BaseSettings):
 
     UPLOAD_DIR: str = "uploads"
 
+    OPENAI_API_KEY: str | None = None
+    OPENAI_MODEL: str = "gpt-4.1-mini"
+    OPENAI_TEMPERATURE: float = 0.7
+    OPENAI_BASE_URL: str | None = None
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+    )
+
     @property
     def sqlalchemy_database_uri(self) -> str:
-        # SQLAlchemy + PyMySQL
         user = quote_plus(self.MYSQL_USER)
-        password = quote_plus(self.MYSQL_PASSWORD)  # ✅ encodes @ as %40, etc.
+        password = quote_plus(self.MYSQL_PASSWORD)
         db = quote_plus(self.MYSQL_DB)
 
         return (
             f"mysql+pymysql://{user}:{password}"
             f"@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{db}"
         )
-
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
 
 
 settings = Settings()

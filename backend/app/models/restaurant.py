@@ -24,15 +24,18 @@ class Restaurant(Base):
     contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     website: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    hours: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # optional
-    photos: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)  # optional (URLs)
-    price_tier: Mapped[str | None] = mapped_column(String(4), nullable=True)  # $..$$$$
-    keywords: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)  # e.g. wifi/outdoor
+    hours: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    photos: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    price_tier: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    keywords: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("owners.id"), nullable=True, index=True)
+
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     created_by = relationship("User", back_populates="restaurants_created")
+    owner = relationship("Owner", back_populates="restaurants")
     reviews = relationship("Review", back_populates="restaurant", cascade="all, delete-orphan")
     favorites = relationship("Favorite", back_populates="restaurant", cascade="all, delete-orphan")
 
