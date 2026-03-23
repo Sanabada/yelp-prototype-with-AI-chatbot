@@ -1,29 +1,29 @@
+import { Link } from "react-router-dom";
 import RestaurantCard from "../components/RestaurantCard";
+import { getFavorites } from "../utils/storage";
 
 function Favorites() {
-
-  const favoriteRestaurants = [
-    { id: 1, name: "Pasta Palace", cuisine: "Italian", city: "San Jose" },
-    { id: 2, name: "Sushi Zen", cuisine: "Japanese", city: "San Jose" }
-  ];
+  const favorites = getFavorites();
 
   return (
-    <div className="container-xl mt-5">
-
+    <div className="container-xl py-4">
       <h2 className="fw-bold mb-4">My Favorites</h2>
 
-      {favoriteRestaurants.length === 0 ? (
-        <p className="text-muted">No favorites yet.</p>
+      {favorites.length === 0 ? (
+        <div className="empty-card text-center">
+          <h4 className="fw-bold">No favorites yet</h4>
+          <p className="text-muted">Save restaurants from the explore page or restaurant details page.</p>
+          <Link to="/" className="btn btn-danger">
+            Explore Restaurants
+          </Link>
+        </div>
       ) : (
         <div className="row g-4">
-          {favoriteRestaurants.map((restaurant) => (
-            <div className="col-lg-4 col-md-6" key={restaurant.id}>
-              <RestaurantCard restaurant={restaurant} />
-            </div>
+          {favorites.map((restaurant) => (
+            <RestaurantCard key={restaurant.id} restaurant={restaurant} />
           ))}
         </div>
       )}
-
     </div>
   );
 }

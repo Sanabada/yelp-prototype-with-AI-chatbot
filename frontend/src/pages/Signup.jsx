@@ -1,70 +1,72 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import API from "../services/api";
+import YelpLogo from "../components/YelpLogo";
 
 function Signup() {
   const [form, setForm] = useState({
     name: "",
     email: "",
-    password: ""
+    password: "",
   });
-
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value
-    });
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    if (name === "password" && value.length > 0 && value.length < 8) {
+      setError("Please enter a minimum 8 character password.");
+    } else {
+      setError("");
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setSuccess("");
+
+    if (form.password.length < 8) {
+      setError("Please enter a minimum 8 character password.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
 
     try {
       await API.post("/auth/signup", form);
-
-      setSuccess("Account created successfully!");
-      setTimeout(() => {
-        navigate("/login");
-      }, 1000);
-
+      setSuccess("Account created successfully.");
+      setTimeout(() => navigate("/login"), 900);
     } catch (err) {
-      if (err.response) {
-        setError(err.response.data.detail || "Signup failed");
-      } else {
-        setError("Server connection error");
-      }
+      setError(err?.response?.data?.detail || "Signup failed");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="container-xl mt-5">
-
+    <div className="container-xl py-4">
       <div className="row justify-content-center">
-        <div className="col-md-6">
+        <div className="col-lg-6">
+          <div className="card p-4 shadow-sm border-0 rounded-4">
+            <div className="mb-3">
+              <YelpLogo size={68} />
+            </div>
 
-          <div className="card p-4 shadow-sm">
             <h3 className="fw-bold mb-4 text-center">Create Account</h3>
 
-            {error && (
-              <div className="alert alert-danger">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="alert alert-success">
-                {success}
-              </div>
-            )}
+            {error && <div className="alert alert-danger">{error}</div>}
+            {success && <div className="alert alert-success">{success}</div>}
 
             <form onSubmit={handleSubmit}>
-
               <div className="mb-3">
                 <label className="form-label">Full Name</label>
                 <input
@@ -100,22 +102,20 @@ function Signup() {
                   minLength="8"
                   required
                 />
-                <small className="text-muted">
-                  Password must be at least 8 characters.
-                </small>
+                <small className="text-muted">Password must be at least 8 characters.</small>
               </div>
 
-              <button type="submit" className="btn btn-danger w-100">
-                Sign Up
+              <button type="submit" className="btn btn-danger w-100" disabled={submitting}>
+                {submitting ? "Creating account..." : "Sign Up"}
               </button>
-
             </form>
 
+            <p className="text-center mt-3 mb-0">
+              Already have an account? <Link to="/login">Login</Link>
+            </p>
           </div>
-
         </div>
       </div>
-
     </div>
   );
 }

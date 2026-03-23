@@ -1,134 +1,204 @@
-import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import API from "../services/api";
+import { demoRestaurants } from "../data/demoRestaurants";
+import {
+  addHistory,
+  getCachedRestaurants,
+  getFavorites,
+  getLocalRestaurants,
+  getLocalReviews,
+  toggleFavorite,
+} from "../utils/storage";
+import {
+  formatHours,
+  getRestaurantImage,
+  mergeRestaurants,
+  normalizeRestaurant,
+} from "../utils/restaurantHelpers";
 
 function RestaurantDetails() {
   const { id } = useParams();
   const [restaurant, setRestaurant] = useState(null);
+  const [warning, setWarning] = useState("");
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
-    const restaurants = {
-      1: {
-        name: "Pasta Palace",
-        cuisine: "Italian",
-        city: "San Jose",
-        state: "CA",
-        price: "$$",
-        rating: 4.5,
-        reviewCount: 128,
-        description:
-          "Authentic Italian cuisine with handcrafted pasta and wood-fired pizzas.",
-        address: "123 Main Street",
-        phone: "(408) 123-4567",
-        hours: "Mon-Sun: 11AM - 10PM",
-        images: [
-          "https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=1200&q=80",
-          "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1200&q=80"
-        ]
-      },
-      2: {
-        name: "Sushi Zen",
-        cuisine: "Japanese",
-        city: "San Jose",
-        state: "CA",
-        price: "$$$",
-        rating: 4.7,
-        reviewCount: 214,
-        description:
-          "Fresh sushi, sashimi, and modern Japanese fusion dishes.",
-        address: "456 Sakura Avenue",
-        phone: "(408) 222-7890",
-        hours: "Mon-Sat: 12PM - 11PM",
-        images: [
-          "https://images.unsplash.com/photo-1562967916-eb82221dfb92?auto=format&fit=crop&w=1200&q=80",
-          "https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=1200&q=80"
-        ]
-      },
-      3: {
-        name: "Spice Garden",
-        cuisine: "Indian",
-        city: "San Jose",
-        state: "CA",
-        price: "$$",
-        rating: 4.6,
-        reviewCount: 176,
-        description:
-          "Rich Indian flavors with traditional curries and tandoori specialties.",
-        address: "789 Curry Lane",
-        phone: "(408) 555-6789",
-        hours: "Daily: 11AM - 9:30PM",
-        images: [
-          "https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?auto=format&fit=crop&w=1200&q=80",
-          "https://images.unsplash.com/photo-1585937421612-70a008356fbe?auto=format&fit=crop&w=1200&q=80"
-        ]
-      },
-    };
-
-    setRestaurant(restaurants[id]);
+    loadRestaurant();
   }, [id]);
 
-  if (!restaurant) return <div className="container mt-5">Loading...</div>;
+  const favorite = useMemo(() => {
+    return getFavorites().some((item) => String(item.id) === String(id));
+  }, [id, restaurant]);
+
+  const loadRestaurant = async () => {
+    setWarning("");
+
+    const fallbackPool = mergeRestaurants(getLocalRestaurants(), getCachedRestaurants(), demoRestaurants);
+    const fallbackRestaurant = fallbackPool.find((item) => String(item.id) === String(id));
+
+    try {
+      const response = await API.get(`/restaurants/${id}`);
+      const item = normalizeRestaurant(response.data, id);
+      setRestaurant(item);
+      addHistory("Viewed restaurant", item);
+    } catch {
+      if (fallbackRestaurant) {
+        setRestaurant(fallbackRestaurant);
+        setWarning("Backend details endpoint failed, so cached/local data is being shown.");
+        addHistory("Viewed restaurant", fallbackRestaurant);
+      }
+    }
+
+    try {
+      const reviewResponse = await API.get(`/restaurants/${id}/reviews`);
+      const payload = Array.isArray(reviewResponse.data)
+        ? reviewResponse.data
+        : reviewResponse.data?.reviews || [];
+      setReviews([...payload, ...getLocalReviews(id)]);
+    } catch {
+      setReviews(getLocalReviews(id));
+    }
+  };
+
+  if (!restaurant) {
+    return (
+      <div className="container py-5 text-center">
+        <div className="spinner-border text-danger" role="status" />
+      </div>
+    );
+  }
+
+  const handleFavorite = () => {
+    toggleFavorite(restaurant);
+    window.location.reload();
+  };
+
+  const images = restaurant.photos?.length ? restaurant.photos : [getRestaurantImage(restaurant)];
 
   return (
-    <div className="container mt-4">
+    <div className="container-xl py-4">
+      {warning && <div className="alert alert-warning">{warning}</div>}
 
-      <div className="mb-3">
-        <h2 className="fw-bold">{restaurant.name}</h2>
-        <div className="d-flex align-items-center gap-3 mt-2">
-          <span className="text-warning fw-bold">
-            ★ {restaurant.rating}
-          </span>
-          <span className="text-muted">
-            ({restaurant.reviewCount} reviews)
-          </span>
-          <span>{restaurant.price}</span>
-          <span className="text-muted">
-            {restaurant.cuisine} • {restaurant.city}, {restaurant.state}
-          </span>
+      <div className="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+        <div>
+          <h2 className="fw-bold mb-2">{restaurant.name}</h2>
+          <div className="d-flex align-items-center gap-3 flex-wrap">
+            <span className="text-warning fw-bold">★ {restaurant.rating.toFixed(1)}</span>
+            <span className="text-muted">({restaurant.review_count} reviews)</span>
+            <span>{restaurant.price_tier}</span>
+            <span className="text-muted">
+              {restaurant.cuisine_type} • {restaurant.city}, {restaurant.state}
+            </span>
+          </div>
+        </div>
+
+        <div className="d-flex gap-2">
+          <button className="btn btn-outline-dark" type="button" onClick={handleFavorite}>
+            {favorite ? "Remove Favorite" : "Add Favorite"}
+          </button>
+          <Link className="btn btn-danger" to={`/restaurant/${restaurant.id}/review`}>
+            Write Review
+          </Link>
         </div>
       </div>
 
-      {/* IMAGE GRID */}
-      <div className="row mb-4">
-        <div className="col-md-8">
+      <div className="row g-3 mb-4">
+        <div className="col-lg-8">
           <img
-            src={restaurant.images[0]}
-            className="img-fluid rounded"
-            style={{ height: "400px", width: "100%", objectFit: "cover" }}
-            alt="main"
+            src={images[0]}
+            className="img-fluid rounded details-main-image"
+            alt={restaurant.name}
+            onError={(event) => {
+              event.currentTarget.src = getRestaurantImage(restaurant);
+            }}
           />
         </div>
-        <div className="col-md-4">
+        <div className="col-lg-4">
           <img
-            src={restaurant.images[1]}
-            className="img-fluid rounded"
-            style={{ height: "400px", width: "100%", objectFit: "cover" }}
-            alt="side"
+            src={images[1] || getRestaurantImage(restaurant)}
+            className="img-fluid rounded details-side-image"
+            alt={`${restaurant.name} preview`}
+            onError={(event) => {
+              event.currentTarget.src = getRestaurantImage(restaurant);
+            }}
           />
         </div>
       </div>
 
-      <div className="row">
-        <div className="col-md-8">
-          <h5 className="fw-bold mb-3">About</h5>
-          <p className="text-muted">{restaurant.description}</p>
+      <div className="row g-4">
+        <div className="col-lg-8">
+          <div className="card border-0 shadow-sm p-4">
+            <h5 className="fw-bold mb-3">About</h5>
+            <p className="text-muted mb-0">{restaurant.description}</p>
+
+            {restaurant.keywords?.length > 0 && (
+              <div className="mt-4">
+                <h6 className="fw-bold mb-2">Keywords</h6>
+                <div className="d-flex flex-wrap gap-2">
+                  {restaurant.keywords.map((keyword) => (
+                    <span key={keyword} className="badge text-bg-light border">
+                      {keyword}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="card border-0 shadow-sm p-4 mt-4">
+            <h5 className="fw-bold mb-3">Reviews</h5>
+            {reviews.length === 0 ? (
+              <p className="text-muted mb-0">No reviews yet.</p>
+            ) : (
+              <div className="d-flex flex-column gap-3">
+                {reviews.map((review, index) => (
+                  <div key={review.id || index} className="border rounded-3 p-3">
+                    <div className="d-flex justify-content-between flex-wrap gap-2">
+                      <strong>{review.user_name || review.author || "User"}</strong>
+                      <span>★ {review.rating || 0}</span>
+                    </div>
+                    <p className="mb-1 mt-2">{review.comment || "No comment"}</p>
+                    {review.created_at && (
+                      <small className="text-muted">
+                        {new Date(review.created_at).toLocaleString()}
+                      </small>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="col-md-4">
-          <div className="card p-3 shadow-sm">
+        <div className="col-lg-4">
+          <div className="card border-0 shadow-sm p-4">
             <h6 className="fw-bold">Location</h6>
             <p className="text-muted">
-              {restaurant.address}, {restaurant.city}, {restaurant.state}
+              {restaurant.address || "Address not provided"}
+              {restaurant.city ? `, ${restaurant.city}` : ""}
+              {restaurant.state ? `, ${restaurant.state}` : ""}
+              {restaurant.zip_code ? ` ${restaurant.zip_code}` : ""}
             </p>
 
             <h6 className="fw-bold">Contact</h6>
-            <p className="text-muted">{restaurant.phone}</p>
+            <p className="text-muted mb-2">{restaurant.contact_phone || "No phone listed"}</p>
+            <p className="text-muted mb-2">{restaurant.contact_email || "No email listed"}</p>
 
             <h6 className="fw-bold">Hours</h6>
-            <p className="text-muted">{restaurant.hours}</p>
+            <p className="text-muted">{formatHours(restaurant.hours)}</p>
+
+            {restaurant.website && (
+              <>
+                <h6 className="fw-bold">Website</h6>
+                <a href={restaurant.website} target="_blank" rel="noreferrer">
+                  {restaurant.website}
+                </a>
+              </>
+            )}
           </div>
         </div>
       </div>
-
     </div>
   );
 }

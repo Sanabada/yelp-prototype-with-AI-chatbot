@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import API from "../services/api";
 import YelpLogo from "../components/YelpLogo";
 
-function Login() {
-  const [identifier, setIdentifier] = useState("");
+function OwnerLogin() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -17,36 +17,27 @@ function Login() {
     setError("");
 
     try {
-      let response;
+      const body = new URLSearchParams();
+      body.append("username", email);
+      body.append("password", password);
 
-      try {
-        response = await API.post("/auth/login", {
-        email: identifier,
-        username: identifier,
-        password,
+      const response = await API.post("/owners/login", body, {
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
-      } catch {
-        const body = new URLSearchParams();
-        body.append("username", identifier);
-        body.append("password", password);
-        response = await API.post("/auth/login", body, {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        });
-      }
 
       const token = response.data?.access_token || response.data?.token;
       if (!token) {
-        throw new Error("No access token returned from login.");
+        throw new Error("No owner access token returned.");
       }
 
-      localStorage.removeItem("owner_token");
-      localStorage.setItem("token", token);
+      localStorage.removeItem("token");
+      localStorage.setItem("owner_token", token);
 
-      const next = location.state?.from || "/";
+      const next = location.state?.from || "/owner/dashboard";
       navigate(next);
       window.location.reload();
     } catch (err) {
-      setError(err?.response?.data?.detail || err.message || "Login failed. Please try again.");
+      setError(err?.response?.data?.detail || err.message || "Owner login failed");
     } finally {
       setSubmitting(false);
     }
@@ -56,23 +47,23 @@ function Login() {
     <div className="container-xl py-4">
       <div className="row justify-content-center">
         <div className="col-lg-6">
-          <div className="card shadow-sm border-0 rounded-4 p-4">
+          <div className="card shadow-sm p-4 border-0 rounded-4">
             <div className="mb-3">
               <YelpLogo size={68} />
             </div>
 
-            <h2 className="mb-4 text-center">Login</h2>
+            <h2 className="mb-4 text-center">Owner Login</h2>
 
             {error && <div className="alert alert-danger">{error}</div>}
 
             <form onSubmit={handleSubmit}>
               <div className="mb-3">
-                <label className="form-label">Email / Username</label>
+                <label className="form-label">Email</label>
                 <input
-                  type="text"
+                  type="email"
                   className="form-control"
-                  value={identifier}
-                  onChange={(event) => setIdentifier(event.target.value)}
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
                   required
                 />
               </div>
@@ -88,16 +79,13 @@ function Login() {
                 />
               </div>
 
-              <button type="submit" className="btn btn-danger w-100" disabled={submitting}>
+              <button className="btn btn-danger w-100" disabled={submitting}>
                 {submitting ? "Logging in..." : "Login"}
               </button>
             </form>
 
-            <p className="text-center mt-3 mb-0">
-              New user? <Link to="/signup">Create an account</Link>
-            </p>
-            <p className="text-center mt-2 mb-0">
-              Restaurant owner? <Link to="/owner/login">Owner login</Link>
+            <p className="mt-3 mb-0 text-center">
+              New owner? <Link to="/owner/signup">Create an owner account</Link>
             </p>
           </div>
         </div>
@@ -106,4 +94,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default OwnerLogin;
