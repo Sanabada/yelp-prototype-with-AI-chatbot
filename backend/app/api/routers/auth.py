@@ -1,27 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_user
-from app.core.security import hash_password, verify_password, create_access_token
+from app.api.deps import get_current_user, get_db
+from app.core.security import create_access_token, hash_password, verify_password
 from app.models.user import User
-from app.schemas.auth import SignupIn, LoginIn, TokenOut
+from app.schemas.auth import LoginIn, SignupIn, TokenOut
 from app.schemas.user import UserOut
+from sqlalchemy import or_
 
 router = APIRouter(prefix="/auth")
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
 
-class SignupPayload(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-    email: EmailStr
-    password: str = Field(min_length=8, max_length=128)
-
-    @field_validator("password")
-    @classmethod
-    def bcrypt_limit(cls, v: str) -> str:
-        if len(v.encode("utf-8")) > 72:
-            raise ValueError("Password must be at most 72 bytes (bcrypt limit).")
-        return v
 @router.post("/signup", response_model=UserOut, status_code=201)
 def signup(payload: SignupIn, db: Session = Depends(get_db)):
     exists = db.query(User).filter(User.email == payload.email).first()
@@ -40,13 +30,66 @@ def signup(payload: SignupIn, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenOut)
-def login(payload: LoginIn, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
-    if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+async def login(request: Request, db: Session = Depends(get_db)):
+    content_type = (request.headers.get("content-type") or "").lower()
+
+    username_or_email = None
+    password = None
+
+    if "application/json" in content_type:
+        payload = LoginIn.model_validate(await request.json())
+        username_or_email = payload.email or payload.username
+        password = payload.password
+    else:
+        form = await request.form()
+        username_or_email = form.get("username") or form.get("email")
+        password = form.get("password")
+
+    if not username_or_email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Login requires username/email and password",
+        )
+
+    user = (
+    db.query(User)
+    .filter(
+        or_(
+            User.email == username_or_email,
+            User.name == username_or_email,
+        )
+    )
+    .first()
+)
+    if not user or not verify_password(password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+        )
 
     token = create_access_token(subject=str(user.id))
-    return TokenOut(access_token=token)
+    return TokenOut(access_token=token, token_type="bearer")
+
+
+@router.post("/login/form", response_model=TokenOut, include_in_schema=False)
+def login_form(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    user = (
+    db.query(User)
+    .filter(
+        or_(
+            User.email == form_data.username,
+            User.name == form_data.username,
+        )
+    )
+    .first()
+)
+    if not user or not verify_password(form_data.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    token = create_access_token(subject=str(user.id))
+    return TokenOut(access_token=token, token_type="bearer")
 
 
 @router.get("/me", response_model=UserOut)

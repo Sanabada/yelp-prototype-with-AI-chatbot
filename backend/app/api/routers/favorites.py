@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_user
+from app.api.deps import get_current_user, get_db
 from app.models.favorite import Favorite
 from app.models.restaurant import Restaurant
 from app.models.user import User
@@ -16,13 +16,13 @@ def list_favorites(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    favs = (
+    favorites = (
         db.query(Favorite)
         .filter(Favorite.user_id == current_user.id)
         .order_by(Favorite.created_at.desc())
         .all()
     )
-    return [FavoriteOut(restaurant_id=f.restaurant_id, created_at=str(f.created_at)) for f in favs]
+    return [FavoriteOut(restaurant_id=f.restaurant_id, created_at=str(f.created_at)) for f in favorites]
 
 
 @router.post("/{restaurant_id}", status_code=201)
@@ -35,8 +35,8 @@ def add_favorite(
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
-    fav = Favorite(user_id=current_user.id, restaurant_id=restaurant_id)
-    db.add(fav)
+    favorite = Favorite(user_id=current_user.id, restaurant_id=restaurant_id)
+    db.add(favorite)
     try:
         db.commit()
     except IntegrityError:
@@ -51,14 +51,14 @@ def remove_favorite(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    fav = (
+    favorite = (
         db.query(Favorite)
         .filter(Favorite.user_id == current_user.id, Favorite.restaurant_id == restaurant_id)
         .first()
     )
-    if not fav:
+    if not favorite:
         return None
 
-    db.delete(fav)
+    db.delete(favorite)
     db.commit()
     return None

@@ -1,8 +1,7 @@
-from sqlalchemy import String, DateTime, func, UniqueConstraint
+from sqlalchemy import DateTime, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
-
 
 
 class User(Base):
@@ -17,16 +16,15 @@ class User(Base):
     phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     about_me: Mapped[str | None] = mapped_column(String(500), nullable=True)
     city: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    state: Mapped[str | None] = mapped_column(String(2), nullable=True)  # abbreviated
-    country: Mapped[str | None] = mapped_column(String(120), nullable=True)  # dropdown on FE
+    state: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    country: Mapped[str | None] = mapped_column(String(120), nullable=True)
     languages: Mapped[str | None] = mapped_column(String(200), nullable=True)
     gender: Mapped[str | None] = mapped_column(String(50), nullable=True)
-
     profile_photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     preferences = relationship("UserPreference", back_populates="user", uselist=False)
-    reviews = relationship("Review", back_populates="user")
-    favorites = relationship("Favorite", back_populates="user")
+    reviews = relationship("Review", back_populates="user", cascade="all, delete-orphan")
+    favorites = relationship("Favorite", back_populates="user", cascade="all, delete-orphan")
     restaurants_created = relationship("Restaurant", back_populates="created_by")

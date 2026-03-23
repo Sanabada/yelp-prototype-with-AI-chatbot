@@ -32,10 +32,6 @@ function OwnerDashboard() {
   const [restaurantForm, setRestaurantForm] = useState(emptyRestaurant);
   const localRestaurants = getLocalRestaurants();
 
-  useEffect(() => {
-    loadOwnerData();
-  }, []);
-
   const loadOwnerData = async () => {
     setError("");
     try {
@@ -50,6 +46,10 @@ function OwnerDashboard() {
       setError(err?.response?.data?.detail || "Could not load owner dashboard. Local fallback remains available.");
     }
   };
+
+  useEffect(() => {
+    loadOwnerData();
+  }, []);
 
   const handleRestaurantChange = (event) => {
     const { name, value } = event.target;

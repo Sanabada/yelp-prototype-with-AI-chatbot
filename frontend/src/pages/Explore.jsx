@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
+import AiAskBar from "../components/AiAskBar";
 import RestaurantCard from "../components/RestaurantCard";
 import API from "../services/api";
 import { demoRestaurants } from "../data/demoRestaurants";
-import { getCachedRestaurants, getLocalRestaurants, setCachedRestaurants } from "../utils/storage";
+import {
+  getCachedRestaurants,
+  getLocalRestaurants,
+  setCachedRestaurants,
+} from "../utils/storage";
 import { mergeRestaurants } from "../utils/restaurantHelpers";
 
 function Explore() {
@@ -31,7 +36,7 @@ function Explore() {
       const merged = mergeRestaurants(payload, local);
       setRestaurants(merged.length ? merged : mergeRestaurants(local, demoRestaurants));
       setCachedRestaurants(payload);
-    } catch (error) {
+    } catch {
       setWarning("Backend restaurants endpoint failed, so local/demo data is being shown.");
       setRestaurants(mergeRestaurants(local, cached, demoRestaurants));
     } finally {
@@ -44,8 +49,16 @@ function Explore() {
     if (!query) return restaurants;
 
     return restaurants.filter((restaurant) => {
-      const keywords = Array.isArray(restaurant.keywords) ? restaurant.keywords.join(" ") : "";
-      return [restaurant.name, restaurant.cuisine_type, restaurant.city, keywords]
+      const keywords = Array.isArray(restaurant.keywords)
+        ? restaurant.keywords.join(" ")
+        : "";
+
+      return [
+        restaurant.name,
+        restaurant.cuisine_type,
+        restaurant.city,
+        keywords,
+      ]
         .join(" ")
         .toLowerCase()
         .includes(query);
@@ -55,13 +68,13 @@ function Explore() {
   return (
     <div className="container-xl py-4">
       <div className="hero-section mb-4">
-        <div className="hero-panel text-center text-white">
-          <h1 className="display-5 fw-bold mb-3">Discover Exceptional Dining</h1>
-          <p className="fs-5 mb-4">
-            Explore restaurants, manage favorites, and use the chatbot for quick suggestions.
+        <div className="hero-panel text-center">
+          <h1 className="fw-bold text-dark">Discover Exceptional Dining</h1>
+          <p className="mb-0 fw-medium text-danger">
+            Explore restaurants, manage favorites, and use DineBot for quick suggestions.
           </p>
 
-          <div className="input-group hero-search mx-auto">
+          <div className="input-group hero-search mx-auto mt-3">
             <input
               type="text"
               className="form-control"
@@ -76,7 +89,9 @@ function Explore() {
         </div>
       </div>
 
-      {warning && <div className="alert alert-warning">{warning}</div>}
+      <AiAskBar />
+
+      {warning && <div className="alert alert-warning mt-3">{warning}</div>}
 
       {loading ? (
         <div className="text-center py-5">

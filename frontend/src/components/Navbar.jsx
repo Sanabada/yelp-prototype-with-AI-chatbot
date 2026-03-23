@@ -34,6 +34,10 @@ function Navbar() {
             Explore
           </Link>
 
+          <Link className={`btn btn-sm ${isActive("/chat")}`} to="/chat">
+            DineBot
+          </Link>
+
           {isAuthed && (
             <>
               <Link className={`btn btn-sm ${isActive("/add-restaurant")}`} to="/add-restaurant">
@@ -46,10 +50,6 @@ function Navbar() {
 
               <Link className={`btn btn-sm ${isActive("/history")}`} to="/history">
                 History
-              </Link>
-
-              <Link className={`btn btn-sm ${isActive("/chat")}`} to="/chat">
-                AI Assistant
               </Link>
             </>
           )}

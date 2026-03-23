@@ -1,29 +1,31 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_user
-from app.models.review import Review
+from app.api.deps import get_current_user, get_db
 from app.models.restaurant import Restaurant
+from app.models.review import Review
 from app.models.user import User
-from app.schemas.review import ReviewCreateIn, ReviewUpdateIn, ReviewOut
+from app.schemas.review import ReviewCreateIn, ReviewOut, ReviewUpdateIn
 
 router = APIRouter()
 
 
 @router.get("/restaurants/{restaurant_id}/reviews", response_model=list[ReviewOut])
-def list_reviews_for_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
+def list_reviews_for_restaurant(
+    restaurant_id: int,
+    db: Session = Depends(get_db),
+):
     exists = db.get(Restaurant, restaurant_id)
     if not exists:
         raise HTTPException(status_code=404, detail="Restaurant not found")
 
-    reviews = (
+    return (
         db.query(Review)
         .filter(Review.restaurant_id == restaurant_id)
         .order_by(Review.created_at.desc())
         .all()
     )
-    return reviews
 
 
 @router.post("/restaurants/{restaurant_id}/reviews", response_model=ReviewOut, status_code=201)
@@ -44,11 +46,15 @@ def create_review(
         comment=payload.comment,
     )
     db.add(review)
+
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="You already reviewed this restaurant (update instead).")
+        raise HTTPException(
+            status_code=409,
+            detail="You already reviewed this restaurant (update instead).",
+        )
 
     db.refresh(review)
     return review
@@ -64,13 +70,12 @@ def update_review(
     review = db.get(Review, review_id)
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
-
     if review.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only edit your own review")
 
     data = payload.model_dump(exclude_unset=True)
-    for k, v in data.items():
-        setattr(review, k, v)
+    for key, value in data.items():
+        setattr(review, key, value)
 
     db.commit()
     db.refresh(review)
@@ -86,7 +91,6 @@ def delete_review(
     review = db.get(Review, review_id)
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
-
     if review.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="You can only delete your own review")
 

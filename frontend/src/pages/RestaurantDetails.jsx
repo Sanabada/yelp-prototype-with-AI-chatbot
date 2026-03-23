@@ -23,14 +23,6 @@ function RestaurantDetails() {
   const [warning, setWarning] = useState("");
   const [reviews, setReviews] = useState([]);
 
-  useEffect(() => {
-    loadRestaurant();
-  }, [id]);
-
-  const favorite = useMemo(() => {
-    return getFavorites().some((item) => String(item.id) === String(id));
-  }, [id, restaurant]);
-
   const loadRestaurant = async () => {
     setWarning("");
 
@@ -60,6 +52,14 @@ function RestaurantDetails() {
       setReviews(getLocalReviews(id));
     }
   };
+
+  useEffect(() => {
+    loadRestaurant();
+  }, [id]);
+
+  const favorite = useMemo(() => {
+    return getFavorites().some((item) => String(item.id) === String(id));
+  }, [id]);
 
   if (!restaurant) {
     return (
