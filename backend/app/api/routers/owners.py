@@ -1,7 +1,5 @@
-from typing import List
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -17,6 +15,7 @@ from app.models.restaurant import Restaurant
 from app.models.review import Review
 from app.schemas.owner import (
     OwnerDashboardResponse,
+    OwnerLoginIn,
     OwnerLoginResponse,
     OwnerOut,
     OwnerRestaurantCreate,
@@ -26,7 +25,7 @@ from app.schemas.owner import (
     ReviewReadOnly,
 )
 
-router = APIRouter(prefix="/owners", tags=["Owners"])
+router = APIRouter(prefix="/owners")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/owners/login")
 
 
@@ -54,18 +53,12 @@ def get_current_owner(
     return owner
 
 
-def get_owned_restaurant_or_404(
-    restaurant_id: int,
-    owner: Owner,
-    db: Session,
-) -> Restaurant:
+def get_owned_restaurant_or_404(restaurant_id: int, owner: Owner, db: Session) -> Restaurant:
     restaurant = db.query(Restaurant).filter(Restaurant.id == restaurant_id).first()
     if not restaurant:
         raise HTTPException(status_code=404, detail="Restaurant not found")
-
     if restaurant.owner_id != owner.id:
         raise HTTPException(status_code=403, detail="You do not own this restaurant")
-
     return restaurant
 
 
@@ -88,16 +81,30 @@ def owner_signup(payload: OwnerSignup, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=OwnerLoginResponse)
-def owner_login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db),
-):
-    owner = db.query(Owner).filter(Owner.email == form_data.username).first()
-    if not owner or not verify_password(form_data.password, owner.password_hash):
+async def owner_login(request: Request, db: Session = Depends(get_db)):
+    content_type = (request.headers.get("content-type") or "").lower()
+
+    username_or_email = None
+    password = None
+
+    if "application/json" in content_type:
+        payload = OwnerLoginIn.model_validate(await request.json())
+        username_or_email = payload.email or payload.username
+        password = payload.password
+    else:
+        form = await request.form()
+        username_or_email = form.get("username") or form.get("email")
+        password = form.get("password")
+
+    if not username_or_email or not password:
+        raise HTTPException(status_code=422, detail="Owner login requires username/email and password")
+
+    owner = db.query(Owner).filter(Owner.email == username_or_email).first()
+    if not owner or not verify_password(password, owner.password_hash):
         raise HTTPException(status_code=401, detail="Invalid owner email or password")
 
     access_token = create_owner_access_token(owner.id, owner.email)
-    return {"access_token": access_token, "token_type": "bearer"}
+    return OwnerLoginResponse(access_token=access_token, token_type="bearer")
 
 
 @router.get("/me", response_model=OwnerOut)
@@ -126,6 +133,7 @@ def create_owner_restaurant(
     db: Session = Depends(get_db),
     current_owner: Owner = Depends(get_current_owner),
 ):
+    state = payload.state.upper()[:2] if payload.state else None
     restaurant = Restaurant(
         owner_id=current_owner.id,
         name=payload.name,
@@ -133,7 +141,7 @@ def create_owner_restaurant(
         city=payload.city,
         description=payload.description,
         address=payload.address,
-        state=payload.state.upper()[:2],
+        state=state,
         country=payload.country,
         zip_code=payload.zip_code,
         contact_phone=payload.contact_phone,
@@ -190,21 +198,19 @@ def claim_restaurant(
     return {"message": "Restaurant claimed successfully", "restaurant_id": restaurant.id}
 
 
-@router.get("/restaurants/{restaurant_id}/reviews", response_model=List[ReviewReadOnly])
+@router.get("/restaurants/{restaurant_id}/reviews", response_model=list[ReviewReadOnly])
 def get_owned_restaurant_reviews(
     restaurant_id: int,
     db: Session = Depends(get_db),
     current_owner: Owner = Depends(get_current_owner),
 ):
     restaurant = get_owned_restaurant_or_404(restaurant_id, current_owner, db)
-
-    reviews = (
+    return (
         db.query(Review)
         .filter(Review.restaurant_id == restaurant.id)
         .order_by(Review.created_at.desc())
         .all()
     )
-    return reviews
 
 
 @router.get("/dashboard", response_model=OwnerDashboardResponse)
@@ -213,16 +219,16 @@ def owner_dashboard(
     current_owner: Owner = Depends(get_current_owner),
 ):
     restaurants = db.query(Restaurant).filter(Restaurant.owner_id == current_owner.id).all()
-    restaurant_ids = [r.id for r in restaurants]
+    restaurant_ids = [restaurant.id for restaurant in restaurants]
 
     if not restaurant_ids:
-        return {
-            "total_restaurants": 0,
-            "total_reviews": 0,
-            "average_rating": 0.0,
-            "total_views": 0,
-            "recent_reviews": [],
-        }
+        return OwnerDashboardResponse(
+            total_restaurants=0,
+            total_reviews=0,
+            average_rating=0.0,
+            total_views=0,
+            recent_reviews=[],
+        )
 
     total_reviews, average_rating = (
         db.query(func.count(Review.id), func.avg(Review.rating))
@@ -238,20 +244,10 @@ def owner_dashboard(
         .all()
     )
 
-    return {
-        "total_restaurants": len(restaurants),
-        "total_reviews": int(total_reviews or 0),
-        "average_rating": round(float(average_rating or 0.0), 2),
-        "total_views": 0,
-        "recent_reviews": [
-            {
-                "id": r.id,
-                "restaurant_id": r.restaurant_id,
-                "user_id": r.user_id,
-                "rating": r.rating,
-                "comment": r.comment,
-                "created_at": r.created_at,
-            }
-            for r in recent_reviews
-        ],
-    }
+    return OwnerDashboardResponse(
+        total_restaurants=len(restaurants),
+        total_reviews=int(total_reviews or 0),
+        average_rating=round(float(average_rating or 0.0), 2),
+        total_views=0,
+        recent_reviews=recent_reviews,
+    )

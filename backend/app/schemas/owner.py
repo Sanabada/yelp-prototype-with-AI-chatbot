@@ -1,14 +1,26 @@
 from datetime import datetime
-from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class OwnerSignup(BaseModel):
     name: str
     email: EmailStr
-    password: str = Field(min_length=8)
-    restaurant_location: Optional[str] = None
+    password: str = Field(min_length=8, max_length=128)
+    restaurant_location: str | None = None
+
+    @field_validator("password")
+    @classmethod
+    def bcrypt_limit(cls, value: str) -> str:
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 bytes (bcrypt limit).")
+        return value
+
+
+class OwnerLoginIn(BaseModel):
+    email: EmailStr | None = None
+    username: str | None = None
+    password: str = Field(min_length=1, max_length=128)
 
 
 class OwnerLoginResponse(BaseModel):
@@ -17,8 +29,8 @@ class OwnerLoginResponse(BaseModel):
 
 
 class OwnerUpdate(BaseModel):
-    name: Optional[str] = None
-    restaurant_location: Optional[str] = None
+    name: str | None = None
+    restaurant_location: str | None = None
 
 
 class OwnerOut(BaseModel):
@@ -27,7 +39,7 @@ class OwnerOut(BaseModel):
     id: int
     name: str
     email: EmailStr
-    restaurant_location: Optional[str] = None
+    restaurant_location: str | None = None
     created_at: datetime
 
 
@@ -35,36 +47,36 @@ class OwnerRestaurantCreate(BaseModel):
     name: str
     cuisine_type: str
     city: str
-    description: str
-    address: str
-    state: str
-    country: str
-    zip_code: str
-    contact_phone: Optional[str] = None
-    contact_email: Optional[EmailStr] = None
-    website: Optional[str] = None
+    description: str | None = None
+    address: str | None = None
+    state: str | None = None
+    country: str | None = None
+    zip_code: str | None = None
+    contact_phone: str | None = None
+    contact_email: EmailStr | None = None
+    website: str | None = None
     hours: dict = Field(default_factory=dict)
-    photos: List[str] = Field(default_factory=list)
-    price_tier: str
-    keywords: List[str] = Field(default_factory=list)
+    photos: list[str] = Field(default_factory=list)
+    price_tier: str | None = None
+    keywords: list[str] = Field(default_factory=list)
 
 
 class OwnerRestaurantUpdate(BaseModel):
-    name: Optional[str] = None
-    cuisine_type: Optional[str] = None
-    city: Optional[str] = None
-    description: Optional[str] = None
-    address: Optional[str] = None
-    state: Optional[str] = None
-    country: Optional[str] = None
-    zip_code: Optional[str] = None
-    contact_phone: Optional[str] = None
-    contact_email: Optional[EmailStr] = None
-    website: Optional[str] = None
-    hours: Optional[dict] = None
-    photos: Optional[List[str]] = None
-    price_tier: Optional[str] = None
-    keywords: Optional[List[str]] = None
+    name: str | None = None
+    cuisine_type: str | None = None
+    city: str | None = None
+    description: str | None = None
+    address: str | None = None
+    state: str | None = None
+    country: str | None = None
+    zip_code: str | None = None
+    contact_phone: str | None = None
+    contact_email: EmailStr | None = None
+    website: str | None = None
+    hours: dict | None = None
+    photos: list[str] | None = None
+    price_tier: str | None = None
+    keywords: list[str] | None = None
 
 
 class ReviewReadOnly(BaseModel):
@@ -74,8 +86,8 @@ class ReviewReadOnly(BaseModel):
     restaurant_id: int
     user_id: int
     rating: int
-    comment: Optional[str] = None
-    created_at: Optional[datetime] = None
+    comment: str | None = None
+    created_at: datetime | None = None
 
 
 class OwnerDashboardResponse(BaseModel):
@@ -83,4 +95,4 @@ class OwnerDashboardResponse(BaseModel):
     total_reviews: int
     average_rating: float
     total_views: int
-    recent_reviews: list
+    recent_reviews: list[ReviewReadOnly]

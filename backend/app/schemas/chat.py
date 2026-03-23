@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class ChatMessage(BaseModel):
@@ -7,9 +7,15 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     message: str = Field(min_length=1, max_length=4000)
-    history: list[ChatMessage] = []
+    history: list[ChatMessage] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("history", "conversation_history"),
+    )
 
 
 class ChatResponse(BaseModel):
     answer: str
+    response: str

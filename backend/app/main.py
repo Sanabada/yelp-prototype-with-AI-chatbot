@@ -10,10 +10,12 @@ from app.core.config import settings
 app = FastAPI(
     title=settings.APP_NAME,
     version="1.0.0",
-    description="Yelp Prototype backend: Auth, Users, Preferences, Restaurants, Reviews, Favorites, AI Assistant",
+    description=(
+        "Yelp Prototype backend: Auth, Users, Preferences, Restaurants, Reviews, "
+        "Favorites, Owners, AI Assistant"
+    ),
 )
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -27,15 +29,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ensure uploads directory exists
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-
-# Serve uploaded files during development
-app.mount(
-    "/uploads",
-    StaticFiles(directory=settings.UPLOAD_DIR),
-    name="uploads",
-)
+app.mount(f"/{settings.UPLOAD_DIR}", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 
 @app.get("/")
@@ -46,5 +41,4 @@ def root():
     }
 
 
-# Register all API routes
 app.include_router(api_router)

@@ -1,4 +1,4 @@
-from sqlalchemy import String, Text, DateTime, func, ForeignKey, JSON, Index
+from sqlalchemy import DateTime, ForeignKey, Index, JSON, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -11,7 +11,6 @@ class Restaurant(Base):
 
     name: Mapped[str] = mapped_column(String(200), index=True)
     cuisine_type: Mapped[str] = mapped_column(String(100), index=True)
-
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -31,7 +30,6 @@ class Restaurant(Base):
 
     created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("owners.id"), nullable=True, index=True)
-
     created_at: Mapped[str] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     created_by = relationship("User", back_populates="restaurants_created")
